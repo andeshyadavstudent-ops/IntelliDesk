@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}My Tickets - IntelliDesk{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1>Welcome back, {{ user.name.split(' ')[0] }}</h1>
+        <p>Manage your IT support tickets</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/chat" class="btn-id-outline">
+            <i class="bi bi-chat-dots me-1"></i>AI Assistant
+        </a>
+        <a href="/tickets/new" class="btn-id">
+            <i class="bi bi-plus-lg me-1"></i>New Ticket
+        </a>
+    </div>
+</div>
+
+{% if notification_count and notification_count > 0 %}
+<div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-radius: var(--id-radius-sm);">
+    <div>
+        <strong>🔔 New ticket update</strong><br>
+        You have {{ notification_count }} unread repl{{ 'ies' if notification_count > 1 else 'y' }} from IT Support.
+    </div>
+    <span class="id-badge high">{{ notification_count }} New</span>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-ticket-detailed"></i></div>
+            <div>
+                <div class="stat-value">{{ tickets|length }}</div>
+                <div class="stat-label">Total Tickets</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class="bi bi-circle"></i></div>
+            <div>
+                <div class="stat-value">{{ open_count }}</div>
+                <div class="stat-label">Open</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-arrow-repeat"></i></div>
+            <div>
+                <div class="stat-value">{{ in_progress_count }}</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="bi bi-check-circle"></i></div>
+            <div>
+                <div class="stat-value">{{ closed_count }}</div>
+                <div class="stat-label">Resolved</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="id-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Tickets</h2>
+        <span style="font-size:0.85rem; color:var(--id-text-muted);">Showing {{ tickets|length }} result(s)</span>
+    </div>
+
+    <form method="GET" action="/dashboard" class="filter-bar mb-3">
+        <input type="text" name="q" value="{{ search_query or '' }}" placeholder="Search by subject, status, category..." class="id-input" style="min-width:260px; flex:1;">
+        <select name="status" class="id-select">
+            <option value="all" {% if current_status == 'all' %}selected{% endif %}>All Status</option>
+            <option value="open" {% if current_status == 'open' %}selected{% endif %}>Open</option>
+            <option value="in_progress" {% if current_status == 'in_progress' %}selected{% endif %}>In Progress</option>
+            <option value="closed" {% if current_status == 'closed' %}selected{% endif %}>Closed</option>
+        </select>
+        <button type="submit" class="btn-id btn-sm"><i class="bi bi-search me-1"></i>Search</button>
+        {% if search_query or current_status != 'all' %}
+        <a href="/dashboard" class="btn-id-outline btn-sm" style="text-decoration:none;">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if tickets %}
+    <div class="table-responsive">
+        <table class="id-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Subject</th>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr {% if ticket.has_unread %}style="background: #fff8e1;"{% endif %}>
+                    <td style="color: var(--id-text-muted); font-size: 0.82rem;">{{ ticket.display_id if ticket.display_id is defined else '#' ~ ticket.id }}</td>
+                    <td>
+                        <a href="/tickets/{{ ticket.id }}" class="ticket-subject">{{ ticket.subject }}</a>
+                        {% if ticket.has_unread %}
+                        <span class="id-badge high ms-2">🔔 New Reply</span>
+                        {% endif %}
+                        {% if ticket.attachment_path %}
+                        <span class="id-badge ms-2" style="background: var(--id-info-light); color: var(--id-info);">Image</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="id-badge" style="background: var(--id-info-light); color: var(--id-info);">{{ ticket.category.value | title }}</span></td>
+                    <td><span class="id-badge {{ ticket.priority.value }}">{{ ticket.priority.value | title }}</span></td>
+                    <td><span class="id-badge {{ ticket.status.value }}">{{ ticket.status.value | replace('_', ' ') | title }}</span></td>
+                    <td style="color: var(--id-text-muted); font-size: 0.82rem;">{{ ticket.created_at.strftime('%d %b %Y, %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <h3>No tickets yet</h3>
+        <p>Create a new ticket or chat with our AI assistant for help</p>
+        <a href="/chat" class="btn-id mt-3">
+            <i class="bi bi-chat-dots me-1"></i>Talk to AI Assistant
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

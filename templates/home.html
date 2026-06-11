@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Welcome - IntelliDesk{% endblock %}
+
+{% block content %}
+<div class="id-card mb-4" style="background: linear-gradient(135deg, #eff6ff, #ffffff);">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-8">
+<h1 style="font-size:2rem; font-weight:800; margin-bottom:0.5rem;">
+    Welcome to IntelliDesk
+</h1>
+
+<div class="mb-3">
+    <span class="badge bg-primary px-3 py-2" style="font-size:0.9rem;">
+        Developed and by Andesh Yadav
+    </span>
+</div>
+
+<p style="font-size:1rem; color:var(--id-text-muted); max-width:760px;">
+    IntelliDesk is an AI-powered IT helpdesk platform designed to streamline IT support
+    operations. Users can troubleshoot common technical issues, create and track support
+    tickets, communicate directly with the IT team, and receive intelligent assistance
+    through the integrated AI support agent.
+</p>
+            <div class="d-flex gap-2 flex-wrap mt-3">
+                <a href="/chat" class="btn-id">
+                    <i class="bi bi-robot me-1"></i>Open AI Assistant
+                </a>
+
+                {% if user.role.value == 'admin' %}
+                <a href="/admin" class="btn-id-outline">
+                    <i class="bi bi-grid-1x2 me-1"></i>Admin Dashboard
+                </a>
+                {% else %}
+                <a href="/dashboard" class="btn-id-outline">
+                    <i class="bi bi-ticket-detailed me-1"></i>My Tickets
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="id-card" style="box-shadow:none;">
+                <h3 style="font-size:1rem; font-weight:700;">System Status</h3>
+                <p style="margin:0; color:var(--id-success); font-weight:700;">
+                    <i class="bi bi-check-circle me-1"></i>Online and ready
+                </p>
+                <p style="margin-top:0.5rem; color:var(--id-text-muted); font-size:0.9rem;">
+                    Logged in as {{ user.name }} ({{ user.role.value | title }})
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="id-card h-100">
+            <div class="stat-icon blue mb-3"><i class="bi bi-chat-dots"></i></div>
+            <h3 style="font-size:1.1rem; font-weight:700;">AI Assistant</h3>
+            <p style="color:var(--id-text-muted);">
+                Ask for help with password resets, internet issues, software installation,
+                hardware problems, and access requests.
+            </p>
+            <a href="/chat" class="btn-id-outline">Start Chat</a>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="id-card h-100">
+            <div class="stat-icon green mb-3"><i class="bi bi-ticket-detailed"></i></div>
+            <h3 style="font-size:1.1rem; font-weight:700;">
+                {% if user.role.value == 'admin' %}All Tickets{% else %}My Tickets{% endif %}
+            </h3>
+            <p style="color:var(--id-text-muted);">
+                View ticket status, read updates, and continue conversations with the support team.
+            </p>
+            {% if user.role.value == 'admin' %}
+            <a href="/admin" class="btn-id-outline">Open Dashboard</a>
+            {% else %}
+            <a href="/dashboard" class="btn-id-outline">View Tickets</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="id-card h-100">
+            <div class="stat-icon amber mb-3"><i class="bi bi-plus-circle"></i></div>
+            <h3 style="font-size:1.1rem; font-weight:700;">Create Ticket</h3>
+            <p style="color:var(--id-text-muted);">
+                Submit a manual support request when an issue needs direct IT team follow-up.
+            </p>
+            <a href="/tickets/new" class="btn-id-outline">Create New Ticket</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

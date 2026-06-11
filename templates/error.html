@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} Error - IntelliDesk{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 4rem 1rem;">
+    <div style="font-size: 4rem; font-weight: 800; color: var(--id-primary); opacity: 0.3;">{{ code }}</div>
+    <h1 style="font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0;">{{ message }}</h1>
+    <p style="color: var(--id-text-muted); margin-bottom: 1.5rem;">The page you're looking for doesn't exist or you don't have permission to access it.</p>
+    <a href="/dashboard" class="btn-id">
+        <i class="bi bi-house me-1"></i>Go to Dashboard
+    </a>
+</div>
+{% endblock %}

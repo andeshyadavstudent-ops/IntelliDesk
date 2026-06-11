@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}New Ticket - IntelliDesk{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Create Support Ticket</h1>
+    <p>Describe your IT issue and we'll get it resolved</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="id-card">
+            {% if error %}
+            <div class="alert alert-warning" style="border-radius: var(--id-radius-sm);">{{ error }}</div>
+            {% endif %}
+            <form method="POST" action="/tickets/new" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="id-label">Subject</label>
+                    <input type="text" name="subject" class="id-input" placeholder="Brief summary of your issue" required minlength="3" value="{{ subject_value or '' }}">
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="id-label">Category</label>
+                        <select name="category" class="id-select">
+                            <option value="general" {% if category_value == 'general' %}selected{% endif %}>General IT Inquiry</option>
+                            <option value="network" {% if category_value == 'network' %}selected{% endif %}>Network Issue</option>
+                            <option value="software" {% if category_value == 'software' %}selected{% endif %}>Software</option>
+                            <option value="hardware" {% if category_value == 'hardware' %}selected{% endif %}>Hardware</option>
+                            <option value="access" {% if category_value == 'access' %}selected{% endif %}>Access / Permission</option>
+                            <option value="password" {% if category_value == 'password' %}selected{% endif %}>Password Reset</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="id-label">Priority</label>
+                        <select name="priority" class="id-select">
+                            <option value="low" {% if priority_value == 'low' %}selected{% endif %}>Low - Not urgent</option>
+                            <option value="medium" {% if not priority_value or priority_value == 'medium' %}selected{% endif %}>Medium - Needs attention</option>
+                            <option value="high" {% if priority_value == 'high' %}selected{% endif %}>High - Critical issue</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="id-label">Description</label>
+                    <textarea name="description" class="id-input" rows="6" placeholder="Describe your IT issue in detail. Include any error messages, steps you've already tried, and your device/browser information." required minlength="5">{{ description_value or '' }}</textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="id-label">Attach File / Screenshot</label>
+                    <input type="file" name="attachment" class="id-input">
+                    <small style="color: var(--id-text-muted);">Optional: attach a screenshot, PDF, document, spreadsheet, ZIP, or any other useful file.</small>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn-id">
+                        <i class="bi bi-send me-1"></i>Submit Ticket
+                    </button>
+                    <a href="/dashboard" class="btn-id-outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="id-card" style="background: var(--id-primary-light); border-color: transparent;">
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--id-primary); margin-bottom: 0.75rem;">
+                <i class="bi bi-lightbulb me-1"></i>Quick Tip
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--id-primary-dark); margin-bottom: 0.75rem;">
+                Try our <a href="/chat" style="font-weight: 700; color: var(--id-primary);">AI Assistant</a> first! It can resolve common issues like password resets, connectivity problems, and software troubleshooting instantly.
+            </p>
+            <p style="font-size: 0.82rem; color: var(--id-text-muted); margin: 0;">
+                The AI will automatically create a ticket if it can't resolve your issue.
+            </p>
+        </div>
+
+        <div class="id-card mt-3">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;">Priority Guide</h3>
+            <div style="font-size: 0.82rem; line-height: 1.7;">
+                <div class="mb-2">
+                    <span class="id-badge low">Low</span>
+                    <span class="ms-1" style="color: var(--id-text-muted);">General questions, feature requests</span>
+                </div>
+                <div class="mb-2">
+                    <span class="id-badge medium">Medium</span>
+                    <span class="ms-1" style="color: var(--id-text-muted);">Affecting your work but has workaround</span>
+                </div>
+                <div>
+                    <span class="id-badge high">High</span>
+                    <span class="ms-1" style="color: var(--id-text-muted);">Blocking your work, system down</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

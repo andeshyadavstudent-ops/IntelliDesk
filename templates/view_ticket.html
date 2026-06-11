@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Ticket {{ ticket.display_id if ticket.display_id is defined else '#' ~ ticket.id }} - IntelliDesk{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% if user.role.value == 'admin' %}/admin{% else %}/dashboard{% endif %}" style="color: var(--id-text-muted); font-size: 0.85rem; text-decoration: none;">
+        <i class="bi bi-arrow-left me-1"></i>Back to {% if user.role.value == 'admin' %}Dashboard{% else %}My Tickets{% endif %}
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="id-card mb-3">
+            <div class="ticket-detail-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--id-text-muted); margin-bottom: 0.25rem;">
+                        Ticket {{ ticket.display_id if ticket.display_id is defined else '#' ~ ticket.id }}
+                    </div>
+                    <h1 style="font-size: 1.3rem; font-weight: 700; margin: 0;">{{ ticket.subject }}</h1>
+                    <div class="ticket-meta">
+                        <span class="id-badge {{ ticket.status.value }}">{{ ticket.status.value | replace('_', ' ') | title }}</span>
+                        <span class="id-badge {{ ticket.priority.value }}">{{ ticket.priority.value | title }} Priority</span>
+                        <span class="id-badge" style="background: var(--id-info-light); color: var(--id-info);">{{ ticket.category.value | title }}</span>
+                    </div>
+                </div>
+
+                {% if user.role.value == 'admin' %}
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="/admin/tickets/{{ ticket.id }}/edit" class="btn-id-outline btn-sm" style="text-decoration:none;"><i class="bi bi-pencil me-1"></i>Edit</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if ticket.attachment_path %}
+        <div class="id-card mb-3">
+            <h2 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Initial Attached File</h2>
+            <a href="{{ ticket.attachment_path }}" target="_blank" class="btn-id-outline btn-sm" style="text-decoration:none;">
+                <i class="bi bi-image me-1"></i>View Attached Image
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="id-card">
+            <h2 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Conversation</h2>
+
+            <div class="message-thread">
+                {% for msg in messages %}
+                <div class="message-item">
+                    <div class="message-avatar {{ msg.sender.value }}-msg">
+                        {% if msg.sender.value == 'user' %}<i class="bi bi-person"></i>
+                        {% elif msg.sender.value == 'admin' %}<i class="bi bi-shield-check"></i>
+                        {% else %}<i class="bi bi-robot"></i>{% endif %}
+                    </div>
+                    <div class="message-content">
+                        <div class="message-sender">
+                            {% if msg.sender.value == 'user' %}{{ ticket.user.name }}
+                            {% elif msg.sender.value == 'admin' %}IT Support
+                            {% else %}AI Assistant{% endif %}
+                        </div>
+                        <div class="message-text">{{ msg.content }}</div>
+                        {% if msg.attachment_path %}
+                        <div class="mt-2">
+                            <a href="{{ msg.attachment_path }}" target="_blank" class="btn-id-outline btn-sm" style="text-decoration:none;">
+                                <i class="bi bi-paperclip me-1"></i>View Attached Image
+                            </a>
+                        </div>
+                        {% endif %}
+                        <div class="message-time">{{ msg.created_at.strftime('%d %b %Y at %H:%M') }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if ticket.status.value != 'closed' %}
+            <form method="POST" action="/tickets/{{ ticket.id }}/message" enctype="multipart/form-data" class="mt-4" style="border-top: 1px solid var(--id-border); padding-top: 1rem;">
+                <div class="mb-2">
+                    <label class="id-label">Add a reply</label>
+                    <textarea name="content" class="id-input" rows="3" placeholder="Type your message..." required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="id-label">Attach File / Screenshot (Optional)</label>
+                    <input type="file" name="attachment" class="id-input" >
+                    <small style="color: var(--id-text-muted);">You can attach an image at any time before the ticket is closed.</small>
+                </div>
+                <button type="submit" class="btn-id btn-sm"><i class="bi bi-send me-1"></i>Send</button>
+            </form>
+            {% else %}
+            <div class="mt-3 p-3" style="background: var(--id-success-light); border-radius: var(--id-radius-sm); font-size: 0.85rem; color: var(--id-success);">
+                <i class="bi bi-check-circle me-1"></i>This ticket has been resolved and closed.
+            </div>
+            {% endif %}
+
+            {% if ticket.status.value == 'closed' and user.role.value == 'user' and not ticket.feedback_submitted %}
+            <div class="mt-4" style="border-top: 1px solid var(--id-border); padding-top: 1rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Submit Feedback</h3>
+                <form method="POST" action="/tickets/{{ ticket.id }}/feedback">
+                    <div class="mb-3">
+                        <label class="id-label">Rating</label>
+                        <select name="rating" class="id-select" required>
+                            <option value="5">5 - Excellent</option>
+                            <option value="4">4 - Good</option>
+                            <option value="3">3 - Average</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="1">1 - Very Poor</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="id-label">Comment</label>
+                        <textarea name="comment" class="id-input" rows="3" placeholder="Write your feedback..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-id btn-sm">Submit Feedback</button>
+                </form>
+            </div>
+            {% elif ticket.feedback_submitted %}
+            <div class="mt-4 p-3" style="background: var(--id-primary-light); border-radius: var(--id-radius-sm); font-size: 0.85rem;">
+                <strong>Feedback Submitted</strong><br>
+                Rating: {{ ticket.feedback_rating }}/5<br>
+                Comment: {{ ticket.feedback_comment }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="id-card mb-3">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem;">Ticket Details</h3>
+            <div style="font-size: 0.85rem;">
+                <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom: 1px solid var(--id-border);"><span style="color: var(--id-text-muted);">Created by</span><span style="font-weight: 600;">{{ ticket.user.name }}</span></div>
+                <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom: 1px solid var(--id-border);"><span style="color: var(--id-text-muted);">Created</span><span>{{ ticket.created_at.strftime('%d %b %Y, %H:%M') }}</span></div>
+                <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom: 1px solid var(--id-border);"><span style="color: var(--id-text-muted);">Last updated</span><span>{{ ticket.updated_at.strftime('%d %b %Y, %H:%M') }}</span></div>
+                <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom: 1px solid var(--id-border);"><span style="color: var(--id-text-muted);">Messages</span><span>{{ messages|length }}</span></div>
+            </div>
+        </div>
+
+        {% if user.role.value == 'admin' %}
+        <div class="id-card mb-3">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem;">Admin Actions</h3>
+
+            <form method="POST" action="/admin/tickets/{{ ticket.id }}/status" class="mb-3">
+                <label class="id-label">Update Status</label>
+                <div class="d-flex gap-2">
+                    <select name="status" class="id-select">
+                        <option value="open" {% if ticket.status.value == 'open' %}selected{% endif %}>Open</option>
+                        <option value="in_progress" {% if ticket.status.value == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="closed" {% if ticket.status.value == 'closed' %}selected{% endif %}>Closed</option>
+                        <option value="pending_approval" {% if ticket.status.value == 'pending_approval' %}selected{% endif %}>Pending Approval</option>
+                    </select>
+                    <button type="submit" class="btn-id btn-sm" style="white-space: nowrap;">Update</button>
+                </div>
+            </form>
+
+            <form method="POST" action="/admin/tickets/{{ ticket.id }}/priority" class="mb-3">
+                <label class="id-label">Update Priority</label>
+                <div class="d-flex gap-2">
+                    <select name="priority" class="id-select">
+                        <option value="low" {% if ticket.priority.value == 'low' %}selected{% endif %}>Low</option>
+                        <option value="medium" {% if ticket.priority.value == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="high" {% if ticket.priority.value == 'high' %}selected{% endif %}>High</option>
+                    </select>
+                    <button type="submit" class="btn-id btn-sm" style="white-space: nowrap;">Update</button>
+                </div>
+            </form>
+
+            <a href="/admin/tickets/{{ ticket.id }}/edit" class="btn-id-outline btn-sm" style="text-decoration:none; display:inline-block;"><i class="bi bi-pencil me-1"></i>Open Full Edit Page</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

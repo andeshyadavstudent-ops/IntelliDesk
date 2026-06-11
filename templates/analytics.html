@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Analytics - IntelliDesk{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Analytics Dashboard</h1>
+    <p>Performance metrics and ticket insights</p>
+</div>
+
+<!-- Overview Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-ticket-detailed"></i></div>
+            <div>
+                <div class="stat-value">{{ analytics.total_tickets }}</div>
+                <div class="stat-label">Total Tickets</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="bi bi-robot"></i></div>
+            <div>
+                <div class="stat-value">{{ analytics.ai_resolved }}</div>
+                <div class="stat-label">AI Resolved</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="bi bi-arrow-up-right"></i></div>
+            <div>
+                <div class="stat-value">{{ analytics.escalated }}</div>
+                <div class="stat-label">Escalated</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class="bi bi-clock-history"></i></div>
+            <div>
+                <div class="stat-value">
+                    {% if analytics.total_tickets > 0 %}
+                    {{ ((analytics.ai_resolved / (analytics.ai_resolved + analytics.escalated + 0.001)) * 100) | round(0) | int }}%
+                    {% else %}0%{% endif %}
+                </div>
+                <div class="stat-label">AI Resolution Rate</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="id-card">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Tickets by Category</h3>
+            <div style="position: relative; height: 280px;">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="id-card">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Tickets by Priority</h3>
+            <div style="position: relative; height: 280px;">
+                <canvas id="priorityChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="id-card">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Ticket Status Overview</h3>
+            <div style="position: relative; height: 280px;">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="id-card">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">AI vs Human Resolution</h3>
+            <div style="position: relative; height: 280px;">
+                <canvas id="resolutionChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Tickets -->
+<div class="id-card">
+    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Recent Tickets</h3>
+    {% if analytics.recent_tickets %}
+    <div class="table-responsive">
+        <table class="id-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Subject</th>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in analytics.recent_tickets %}
+                <tr>
+                    <td style="color: var(--id-text-muted); font-size: 0.82rem;">#{{ ticket.id }}</td>
+                    <td><a href="/tickets/{{ ticket.id }}" class="ticket-subject">{{ ticket.subject }}</a></td>
+                    <td><span class="id-badge" style="background: var(--id-info-light); color: var(--id-info);">{{ ticket.category.value | title }}</span></td>
+                    <td><span class="id-badge {{ ticket.priority.value }}">{{ ticket.priority.value | title }}</span></td>
+                    <td><span class="id-badge {{ ticket.status.value }}">{{ ticket.status.value | replace('_', ' ') | title }}</span></td>
+                    <td style="color: var(--id-text-muted); font-size: 0.82rem;">{{ ticket.created_at.strftime('%d %b %Y') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-bar-chart"></i>
+        <h3>No data yet</h3>
+        <p>Analytics will appear once tickets are created</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const catData = {{ analytics.tickets_by_category | tojson }};
+const priData = {{ analytics.tickets_by_priority | tojson }};
+const statusData = {
+    open: {{ analytics.open_tickets }},
+    in_progress: {{ analytics.in_progress_tickets }},
+    closed: {{ analytics.closed_tickets }}
+};
+const resData = {
+    ai: {{ analytics.ai_resolved }},
+    escalated: {{ analytics.escalated }}
+};
+
+const baseOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'bottom',
+            labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10, font: { size: 12, family: "'Plus Jakarta Sans', sans-serif" } }
+        }
+    }
+};
+
+// Category Bar Chart
+new Chart(document.getElementById('categoryChart'), {
+    type: 'bar',
+    data: {
+        labels: Object.keys(catData).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+        datasets: [{
+            label: 'Tickets',
+            data: Object.values(catData),
+            backgroundColor: ['#2563eb', '#0891b2', '#7c3aed', '#d97706', '#dc2626', '#16a34a'],
+            borderRadius: 6,
+            borderSkipped: false,
+            barThickness: 32
+        }]
+    },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+});
+
+// Priority Doughnut
+new Chart(document.getElementById('priorityChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Low', 'Medium', 'High'],
+        datasets: [{
+            data: [priData.low || 0, priData.medium || 0, priData.high || 0],
+            backgroundColor: ['#16a34a', '#d97706', '#dc2626'],
+            borderWidth: 0,
+            cutout: '65%'
+        }]
+    },
+    options: baseOpts
+});
+
+// Status Doughnut
+new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Open', 'In Progress', 'Closed'],
+        datasets: [{
+            data: [statusData.open, statusData.in_progress, statusData.closed],
+            backgroundColor: ['#2563eb', '#d97706', '#16a34a'],
+            borderWidth: 0,
+            cutout: '65%'
+        }]
+    },
+    options: baseOpts
+});
+
+// AI Resolution Pie
+new Chart(document.getElementById('resolutionChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['AI Resolved', 'Escalated to Human'],
+        datasets: [{
+            data: [resData.ai, resData.escalated],
+            backgroundColor: ['#2563eb', '#dc2626'],
+            borderWidth: 0,
+            cutout: '65%'
+        }]
+    },
+    options: baseOpts
+});
+</script>
+{% endblock %}

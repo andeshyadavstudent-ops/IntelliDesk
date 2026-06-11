@@ -1,0 +1,796 @@
+{% extends "base.html" %}
+{% block title %}AI Assistant - IntelliDesk{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  .chat-layout {
+    display:flex;
+    height:calc(100vh - 64px);
+    overflow:hidden;
+    background:var(--id-bg);
+    font-family:"Times New Roman", Times, serif;
+  }
+
+  .chat-sidebar {
+    width:290px;
+    min-width:290px;
+    background:var(--id-surface);
+    border-right:1px solid var(--id-border);
+    display:flex;
+    flex-direction:column;
+    transition:width 0.25s ease;
+    z-index:100;
+    overflow:hidden;
+  }
+  .chat-sidebar.collapsed { width:0; min-width:0; }
+
+  .sidebar-header {
+    padding:16px;
+    border-bottom:1px solid var(--id-border);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .sidebar-header-top {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .sidebar-title {
+    font-size:0.82rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--id-text-muted);
+  }
+  .btn-new-chat {
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--id-primary);
+    color:white;
+    border:none;
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:0.85rem;
+    font-weight:600;
+    cursor:pointer;
+    width:100%;
+    justify-content:center;
+  }
+
+  .sidebar-search {
+    padding:10px 16px;
+    border-bottom:1px solid var(--id-border);
+    position:relative;
+  }
+  .sidebar-search input {
+    width:100%;
+    padding:8px 12px 8px 32px;
+    border-radius:8px;
+    border:1px solid var(--id-border);
+    background:var(--id-bg);
+    font-size:0.85rem;
+    color:var(--id-text);
+    outline:none;
+    font-family:"Times New Roman", Times, serif;
+  }
+  .sidebar-search .si {
+    position:absolute;
+    left:26px;
+    top:50%;
+    transform:translateY(-50%);
+    color:var(--id-text-muted);
+  }
+  .sidebar-history {
+    flex:1;
+    overflow-y:auto;
+    padding:8px 0;
+  }
+
+  .history-item {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 10px 9px 16px;
+    cursor:pointer;
+    transition:background 0.12s;
+    border-left:3px solid transparent;
+    user-select:none;
+  }
+  .history-item:hover { background:var(--id-bg); }
+  .history-item.active {
+    background:var(--id-bg);
+    border-left-color:var(--id-primary);
+  }
+  .hi-icon {
+    width:28px;
+    height:28px;
+    border-radius:6px;
+    background:var(--id-bg);
+    border:1px solid var(--id-border);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.8rem;
+    color:var(--id-primary);
+    flex-shrink:0;
+  }
+  .hi-text { flex:1; min-width:0; }
+  .hi-msg {
+    font-size:0.9rem;
+    font-weight:600;
+    color:var(--id-text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .hi-msg input {
+    width:100%;
+    font-size:0.85rem;
+    border:1px solid var(--id-primary);
+    border-radius:4px;
+    padding:2px 5px;
+    background:white;
+    color:var(--id-text);
+    outline:none;
+    font-family:"Times New Roman", Times, serif;
+  }
+  .hi-meta {
+    font-size:0.75rem;
+    color:var(--id-text-muted);
+    margin-top:2px;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    text-transform:capitalize;
+  }
+  .intent-dot {
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:var(--id-primary);
+    display:inline-block;
+    flex-shrink:0;
+  }
+  .hi-actions { display:none; gap:2px; flex-shrink:0; }
+  .history-item:hover .hi-actions,
+  .history-item.active .hi-actions { display:flex; }
+  .hi-btn {
+    width:26px;
+    height:26px;
+    border-radius:6px;
+    border:none;
+    background:transparent;
+    color:var(--id-text-muted);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:0.78rem;
+  }
+  .hi-btn:hover { background:var(--id-border); color:var(--id-text); }
+  .hi-btn.del:hover { background:#fee2e2; color:#dc2626; }
+
+  .no-history {
+    padding:24px 16px;
+    text-align:center;
+    color:var(--id-text-muted);
+    font-size:0.85rem;
+  }
+
+  .sidebar-toggle {
+    background:var(--id-surface);
+    border:1px solid var(--id-border);
+    border-radius:8px;
+    width:32px;
+    height:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--id-text-muted);
+    flex-shrink:0;
+  }
+
+  .chat-main {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .chat-header {
+    padding:14px 20px;
+    border-bottom:1px solid var(--id-border);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--id-surface);
+  }
+  .chat-messages {
+    flex:1;
+    overflow-y:auto;
+    padding:24px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .chat-input-area {
+    padding:14px 20px;
+    border-top:1px solid var(--id-border);
+    background:var(--id-surface);
+  }
+
+  .chat-bubble {
+    max-width:82%;
+    padding:13px 16px;
+    border-radius:14px;
+    font-size:16px;
+    line-height:1.75;
+    white-space:normal;
+    word-wrap:break-word;
+  }
+  .chat-bubble.user {
+    background:var(--id-primary);
+    color:white;
+    align-self:flex-end;
+    border-bottom-right-radius:5px;
+  }
+  .chat-bubble.ai {
+    background:white;
+    border:1px solid var(--id-border);
+    align-self:flex-start;
+    border-bottom-left-radius:5px;
+    text-align:left;
+  }
+  .chat-bubble.system {
+    background:#ecfdf5;
+    border:1px solid #bbf7d0;
+    color:#166534;
+    align-self:center;
+    max-width:90%;
+    font-size:0.9rem;
+  }
+  .intent-tag {
+    display:inline-block;
+    margin-top:8px;
+    padding:0.18rem 0.55rem;
+    background:rgba(37,99,235,0.1);
+    color:var(--id-primary);
+    border-radius:50px;
+    font-size:0.75rem;
+    font-weight:600;
+  }
+  .md-body { font-size:16px; line-height:1.75; color:inherit; }
+  .md-body p { margin-bottom:8px; }
+  .md-body p:last-child { margin-bottom:0; }
+  .md-body ol,.md-body ul { padding-left:22px; margin-bottom:8px; }
+  .md-body li { margin-bottom:5px; }
+  .md-body strong { font-weight:700; }
+  .md-body code {
+    background:rgba(0,0,0,0.08);
+    padding:1px 5px;
+    border-radius:4px;
+    font-size:14px;
+    font-family:monospace;
+  }
+
+  .chat-input-wrapper {
+    display:flex;
+    gap:0.5rem;
+    background:white;
+    border:1.5px solid var(--id-border);
+    border-radius:12px;
+    padding:0.4rem;
+  }
+  .chat-input-wrapper:focus-within {
+    border-color:var(--id-primary);
+    box-shadow:0 0 0 3px rgba(37,99,235,0.1);
+  }
+  .chat-input-wrapper input {
+    flex:1;
+    border:none;
+    outline:none;
+    padding:0.6rem 0.75rem;
+    font-size:16px;
+    font-family:"Times New Roman", Times, serif;
+    background:transparent;
+  }
+  .chat-input-wrapper button {
+    background:var(--id-primary);
+    color:white;
+    border:none;
+    border-radius:9px;
+    padding:0.55rem 1rem;
+    cursor:pointer;
+  }
+  .quick-btn {
+    background:var(--id-bg);
+    border:1px solid var(--id-border);
+    font-size:0.78rem;
+    border-radius:50px;
+    padding:0.28rem 0.75rem;
+    color:var(--id-text-muted);
+    font-family:"Times New Roman", Times, serif;
+  }
+
+  .sidebar-overlay {
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.3);
+    z-index:99;
+  }
+  .sidebar-overlay.active { display:block; }
+
+  @media(max-width:768px){
+    .chat-sidebar {
+      position:fixed;
+      top:64px;
+      left:0;
+      height:calc(100vh - 64px);
+      transform:translateX(-100%);
+      width:290px !important;
+      min-width:290px !important;
+      transition:transform 0.25s;
+    }
+    .chat-sidebar.open { transform:translateX(0); }
+    .chat-bubble { max-width:94%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="chat-sidebar" id="chatSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-header-top">
+        <span class="sidebar-title">Chat History</span>
+        <button class="sidebar-toggle" id="btnCloseSidebar"><i class="bi bi-layout-sidebar-reverse"></i></button>
+      </div>
+      <button class="btn-new-chat" id="btnNewChat"><i class="bi bi-plus-lg"></i> New Chat</button>
+    </div>
+
+    <div class="sidebar-search">
+      <i class="bi bi-search si"></i>
+      <input type="text" id="historySearch" placeholder="Search conversations...">
+    </div>
+
+    <div class="sidebar-history" id="historyList">
+      {% if sidebar_threads %}
+        {% for thread in sidebar_threads %}
+        <div class="history-item {% if thread.conversation_id == active_conversation_id %}active{% endif %}"
+             data-conversation-id="{{ thread.conversation_id }}"
+             data-title="{{ thread.title | lower }}"
+             data-intent="{{ thread.detected_intent }}">
+          <div class="hi-icon">
+            {% if 'password' in thread.detected_intent %}<i class="bi bi-key"></i>
+            {% elif 'network' in thread.detected_intent %}<i class="bi bi-wifi"></i>
+            {% elif 'software' in thread.detected_intent %}<i class="bi bi-box-arrow-in-down"></i>
+            {% elif 'hardware' in thread.detected_intent %}<i class="bi bi-pc-display"></i>
+            {% elif 'access' in thread.detected_intent %}<i class="bi bi-shield-lock"></i>
+            {% else %}<i class="bi bi-chat-dots"></i>{% endif %}
+          </div>
+          <div class="hi-text">
+            <div class="hi-msg">{{ thread.title }}</div>
+            <div class="hi-meta"><span class="intent-dot"></span>{{ thread.detected_intent | title }}</div>
+          </div>
+          <div class="hi-actions">
+            <button class="hi-btn rename-btn" title="Rename"><i class="bi bi-pencil"></i></button>
+            <button class="hi-btn del delete-btn" title="Delete"><i class="bi bi-trash"></i></button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="no-history">
+          <i class="bi bi-chat-square-dots" style="font-size:1.5rem;display:block;margin-bottom:8px;opacity:0.4;"></i>
+          No conversations yet.<br>Start chatting below!
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="chat-main">
+    <div class="chat-header">
+      <button class="sidebar-toggle" id="btnOpenSidebar"><i class="bi bi-layout-sidebar"></i></button>
+      <div style="width:38px;height:38px;background:linear-gradient(135deg,var(--id-primary),#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1rem;">
+        <i class="bi bi-robot"></i>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:1rem;">AI Assistant</div>
+        <div style="font-size:0.75rem;color:var(--id-success);display:flex;align-items:center;gap:4px;">
+          <span style="width:6px;height:6px;background:var(--id-success);border-radius:50%;display:inline-block;"></span>
+          Online · Powered by Groq
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      {% if not chat_history %}
+        <div class="chat-bubble ai">Hi {{ user.name.split(' ')[0] }}! I'm your AI IT support assistant. Describe your issue or ask me to create a ticket.</div>
+      {% endif %}
+
+      {% for chat in chat_history %}
+        <div class="chat-bubble user">{{ chat.user_input }}</div>
+        <div class="chat-bubble ai">
+          <div class="md-body saved-ai-response">{{ chat.ai_response }}</div>
+          {% if chat.detected_intent %}
+          <div class="intent-tag">
+            <i class="bi bi-diagram-3 me-1"></i>{{ chat.detected_intent | title }} · {{ (chat.confidence_score * 100) | round(1) }}%
+          </div>
+          {% endif %}
+          {% if chat.ticket_created %}
+          <div style="margin-top:8px;">
+            <a href="/tickets/{{ chat.ticket_created }}" style="color:var(--id-primary);font-weight:700;text-decoration:none;">
+              <i class="bi bi-ticket-detailed me-1"></i>View Ticket #{{ chat.ticket_created }}
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-wrapper">
+        <input type="text" id="chatInput" placeholder="Ask me anything or type: create ticket for password reset" autocomplete="off">
+        <button id="sendBtn"><i class="bi bi-send"></i><span class="d-none d-sm-inline"> Send</span></button>
+      </div>
+      <div class="d-flex gap-2 mt-2 flex-wrap">
+        <button class="btn btn-sm quick-btn" onclick="quickMsg('create ticket for password reset')">Create password ticket</button>
+        <button class="btn btn-sm quick-btn" onclick="quickMsg('my internet is not working create ticket')">Create network ticket</button>
+        <button class="btn btn-sm quick-btn" onclick="quickMsg('I need to install new software')">Software help</button>
+        <button class="btn btn-sm quick-btn" onclick="quickMsg('My laptop screen is flickering')">Hardware issue</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+marked.setOptions({ breaks:true, gfm:true });
+
+const chatMessages = document.getElementById('chatMessages');
+const chatInput    = document.getElementById('chatInput');
+const sendBtn      = document.getElementById('sendBtn');
+const sidebar      = document.getElementById('chatSidebar');
+const overlay      = document.getElementById('sidebarOverlay');
+const historyList  = document.getElementById('historyList');
+
+let activeConversationId = "{{ active_conversation_id or '' }}";
+const ICONS = {
+  password:'key',
+  network:'wifi',
+  software:'box-arrow-in-down',
+  hardware:'pc-display',
+  access:'shield-lock',
+  general:'chat-dots'
+};
+
+chatMessages.scrollTop = chatMessages.scrollHeight;
+
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+document.getElementById('btnOpenSidebar').addEventListener('click', toggleSidebar);
+document.getElementById('btnCloseSidebar').addEventListener('click', toggleSidebar);
+document.getElementById('btnNewChat').addEventListener('click', newChat);
+overlay.addEventListener('click', toggleSidebar);
+sendBtn.addEventListener('click', sendMessage);
+
+// Search filters sidebar and Enter opens first visible result.
+document.getElementById('historySearch').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  historyList.querySelectorAll('.history-item').forEach(el => {
+    const ok = (el.dataset.title || '').includes(q) || (el.dataset.intent || '').includes(q);
+    el.style.display = ok ? '' : 'none';
+  });
+});
+
+document.getElementById('historySearch').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const firstVisible = [...historyList.querySelectorAll('.history-item')]
+      .find(el => el.style.display !== 'none');
+    if (firstVisible) firstVisible.click();
+  }
+});
+
+historyList.querySelectorAll('.history-item').forEach(item => wireHistoryItem(item));
+
+function toggleSidebar() {
+  if (window.innerWidth <= 768) {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+  } else {
+    sidebar.classList.toggle('collapsed');
+  }
+}
+
+function newChat() {
+  activeConversationId = "";
+  historyList.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+  chatMessages.innerHTML = '<div class="chat-bubble ai">Hi again! What can I help you with?</div>';
+  chatInput.focus();
+  window.history.replaceState({}, '', '/chat?conversation_id=new');
+  if (window.innerWidth <= 768) toggleSidebar();
+}
+
+function wireHistoryItem(item) {
+  item.addEventListener('click', function(e) {
+    if (e.target.closest('.hi-actions')) return;
+    const id = item.dataset.conversationId;
+    if (id) window.location.href = `/chat?conversation_id=${encodeURIComponent(id)}`;
+  });
+
+  item.querySelector('.rename-btn')?.addEventListener('click', async function(e) {
+    e.stopPropagation();
+
+    const msgDiv = item.querySelector('.hi-msg');
+    const original = msgDiv.textContent.trim();
+    msgDiv.innerHTML = '';
+
+    const inp = document.createElement('input');
+    inp.value = original;
+    msgDiv.appendChild(inp);
+    inp.focus();
+    inp.select();
+
+    const saveTitle = async () => {
+      const val = inp.value.trim() || original;
+      msgDiv.textContent = val;
+      item.dataset.title = val.toLowerCase();
+
+      try {
+        await fetch(`/api/chat/${encodeURIComponent(item.dataset.conversationId)}`, {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({title: val})
+        });
+      } catch(err) {
+        alert('Could not rename chat.');
+      }
+    };
+
+    inp.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') saveTitle();
+      if (ev.key === 'Escape') msgDiv.textContent = original;
+    });
+    inp.addEventListener('blur', () => setTimeout(saveTitle, 150));
+  });
+
+  item.querySelector('.delete-btn')?.addEventListener('click', async function(e) {
+    e.stopPropagation();
+
+    if (!confirm('Delete this chat history?')) return;
+
+    try {
+      const res = await fetch(`/api/chat/${encodeURIComponent(item.dataset.conversationId)}`, {
+        method:'DELETE'
+      });
+
+      if (!res.ok) throw new Error('Delete failed');
+
+      const deletedActive = item.dataset.conversationId === activeConversationId;
+      item.remove();
+
+      if (!historyList.querySelector('.history-item')) {
+        historyList.innerHTML = '<div class="no-history"><i class="bi bi-chat-square-dots" style="font-size:1.5rem;display:block;margin-bottom:8px;opacity:0.4;"></i>No conversations yet.<br>Start chatting below!</div>';
+      }
+
+      if (deletedActive) {
+        activeConversationId = "";
+        chatMessages.innerHTML = '<div class="chat-bubble ai">Chat deleted. Start a new conversation!</div>';
+        window.history.replaceState({}, '', '/chat?conversation_id=new');
+      }
+    } catch(err) {
+      alert('Could not delete chat.');
+    }
+  });
+}
+
+function addSidebarItem(title, intent, conversationId) {
+  document.querySelector('.no-history')?.remove();
+
+  const key = Object.keys(ICONS).find(k => intent.includes(k)) || 'general';
+  const item = document.createElement('div');
+  item.className = 'history-item active';
+  item.dataset.conversationId = conversationId;
+  item.dataset.title = title.toLowerCase();
+  item.dataset.intent = intent;
+
+  item.innerHTML = `
+    <div class="hi-icon"><i class="bi bi-${ICONS[key]}"></i></div>
+    <div class="hi-text">
+      <div class="hi-msg">${escapeHtml(title)}</div>
+      <div class="hi-meta"><span class="intent-dot"></span>${escapeHtml(intent)}</div>
+    </div>
+    <div class="hi-actions">
+      <button class="hi-btn rename-btn" title="Rename"><i class="bi bi-pencil"></i></button>
+      <button class="hi-btn del delete-btn" title="Delete"><i class="bi bi-trash"></i></button>
+    </div>
+  `;
+
+  historyList.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+  historyList.insertBefore(item, historyList.firstChild);
+  wireHistoryItem(item);
+}
+
+function appendUserBubble(text) {
+  const b = document.createElement('div');
+  b.className = 'chat-bubble user';
+  b.textContent = text;
+  chatMessages.appendChild(b);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function appendAiBubble(text, intent, conf) {
+  const b = document.createElement('div');
+  b.className = 'chat-bubble ai';
+
+  const md = document.createElement('div');
+  md.className = 'md-body';
+  md.innerHTML = marked.parse(text || '');
+  b.appendChild(md);
+
+  if (intent) {
+    const tag = document.createElement('div');
+    tag.className = 'intent-tag';
+    tag.innerHTML = `<i class="bi bi-diagram-3 me-1"></i>${escapeHtml(intent)} · ${conf}%`;
+    b.appendChild(tag);
+  }
+
+  chatMessages.appendChild(b);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return b;
+}
+
+function showTyping() {
+  const b = document.createElement('div');
+  b.className = 'chat-bubble ai';
+  b.id = 'typing-ind';
+  b.innerHTML = '<span style="color:var(--id-text-muted);">Thinking...</span>';
+  chatMessages.appendChild(b);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeTyping() {
+  document.getElementById('typing-ind')?.remove();
+}
+
+function quickMsg(text) {
+  chatInput.value = text;
+  sendMessage();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+async function sendMessage() {
+  const message = chatInput.value.trim();
+  if (!message) return;
+
+  appendUserBubble(message);
+  chatInput.value = '';
+  sendBtn.disabled = true;
+  showTyping();
+
+  const wasNewConversation = !activeConversationId;
+
+  try {
+    const resp = await fetch('/api/chat/stream', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        message: message,
+        conversation_id: activeConversationId || null
+      })
+    });
+
+    removeTyping();
+
+    if (!resp.ok || !resp.body) {
+      throw new Error('Bad response');
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ai';
+    const mdDiv = document.createElement('div');
+    mdDiv.className = 'md-body';
+    bubble.appendChild(mdDiv);
+    chatMessages.appendChild(bubble);
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    let fullText = '';
+    let meta = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buf += dec.decode(value, { stream:true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+
+        try {
+          const d = JSON.parse(line.slice(6));
+
+          if (d.type === 'meta') {
+            meta = d;
+            activeConversationId = d.conversation_id;
+            window.history.replaceState({}, '', `/chat?conversation_id=${encodeURIComponent(activeConversationId)}`);
+
+            if (wasNewConversation) {
+              addSidebarItem(message.length > 42 ? message.slice(0,42) + '...' : message, d.intent, activeConversationId);
+            }
+
+          } else if (d.type === 'chunk') {
+            fullText += d.content;
+            mdDiv.innerHTML = marked.parse(fullText);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+          } else if (d.type === 'text') {
+            fullText = d.content;
+            mdDiv.innerHTML = marked.parse(fullText);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+          } else if (d.type === 'done') {
+            if (meta) {
+              const tag = document.createElement('div');
+              tag.className = 'intent-tag';
+              tag.innerHTML = `<i class="bi bi-diagram-3 me-1"></i>${escapeHtml(meta.intent)} · ${meta.confidence}%`;
+              bubble.appendChild(tag);
+            }
+
+            if (d.image_url) {
+              const img = document.createElement('img');
+              img.src = d.image_url;
+              img.alt = 'Related image';
+              img.style.cssText = 'width:100%;max-width:340px;border-radius:10px;margin-top:10px;display:block;';
+              bubble.appendChild(img);
+            }
+
+            if (d.ticket_id) {
+              const n = document.createElement('div');
+              n.className = 'chat-bubble system';
+              const label = d.ticket_display_id || `#${d.ticket_id}`;
+              n.innerHTML = `<a href="/tickets/${d.ticket_id}" style="color:#166534;font-weight:700;text-decoration:none;"><i class="bi bi-ticket-detailed me-1"></i>View Ticket ${label}</a>`;
+              chatMessages.appendChild(n);
+            }
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+          } else if (d.type === 'error') {
+            mdDiv.textContent = 'Sorry, something went wrong: ' + (d.message || 'Please try again.');
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(err) {
+    removeTyping();
+    appendAiBubble('Connection error. Please check the server terminal and try again.', '', '');
+  }
+
+  sendBtn.disabled = false;
+  chatInput.focus();
+}
+document.querySelectorAll(".saved-ai-response").forEach(el => {
+    const raw = el.textContent || "";
+    el.innerHTML = marked.parse(raw);
+});
+</script>
+{% endblock %}

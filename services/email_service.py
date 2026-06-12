@@ -1,116 +1,127 @@
 """
 IntelliDesk Email Service
-Sends account verification/welcome emails and ticket notification emails.
+Uses Resend HTTP API instead of Gmail SMTP.
+This works better on Render Free because SMTP ports are blocked.
 """
 
 import os
-import smtplib
-from email.message import EmailMessage
-from dotenv import load_dotenv
+import httpx
 from typing import Optional
 
-# Load .env explicitly from project root
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-EMAIL_FROM = os.getenv("EMAIL_FROM", EMAIL_USER)
-
-print(f"[EMAIL DEBUG] USER={EMAIL_USER}")
-print(f"[EMAIL DEBUG] PASSWORD FOUND={bool(EMAIL_PASSWORD)}")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+EMAIL_FROM = os.getenv("EMAIL_FROM", "onboarding@resend.dev")
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 
-def send_email(to_email: str, subject: str, body: str) -> bool:
-    """Send a plain text email using Gmail SMTP."""
-    if not EMAIL_PASSWORD:
-        print("[EMAIL] EMAIL_PASSWORD is missing in .env. Email not sent.")
+def _send_email(to_email: str, subject: str, html_body: str) -> bool:
+    """
+    Send email using Resend API.
+    Returns True if email is sent successfully, otherwise False.
+    """
+    if not RESEND_API_KEY:
+        print("[EMAIL] RESEND_API_KEY is missing. Email not sent.")
         return False
 
     try:
-        msg = EmailMessage()
-        msg["From"] = EMAIL_FROM
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.set_content(body)
+        response = httpx.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": EMAIL_FROM,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_body,
+            },
+            timeout=15,
+        )
 
-        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
-            server.starttls()
-            server.login(EMAIL_USER, EMAIL_PASSWORD)
-            server.send_message(msg)
+        if response.status_code in [200, 201]:
+            print(f"[EMAIL] Email sent successfully to {to_email}")
+            return True
 
-        print(f"[EMAIL] Sent to {to_email}: {subject}")
-        return True
+        print(f"[EMAIL] Failed: {response.status_code} - {response.text}")
+        return False
+
     except Exception as e:
         print(f"[EMAIL] Failed to send email: {e}")
         return False
 
 
-def send_verification_email(user_email: str, user_name: str, verification_link: Optional[str] = None) -> bool:
-    body = f"""Hello {user_name},
+def send_verification_email(
+    user_email: str,
+    user_name: str,
+    verification_link: Optional[str] = None
+) -> bool:
+    """
+    Send account verification email.
+    This matches the existing auth_routes.py function call.
+    """
+    if verification_link is None:
+        verification_link = BASE_URL
 
-Welcome to IntelliDesk.
+    subject = "Verify your IntelliDesk account"
 
-Your profile has been created successfully.
-"""
-    if verification_link:
-        body += f"Please verify your account using this link:\n{verification_link}\n\n"
-    else:
-        body += "Your account is ready to use.\n\n"
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Welcome to IntelliDesk, {user_name}!</h2>
+        <p>Thank you for registering with IntelliDesk.</p>
+        <p>Please click the button below to verify your account:</p>
 
-    body += "Regards,\nIntelliDesk IT Support\n"
-    return send_email(user_email, "Welcome to IntelliDesk - Account Created", body)
+        <p>
+            <a href="{verification_link}"
+               style="background-color:#2563eb;color:white;padding:12px 18px;
+               text-decoration:none;border-radius:6px;display:inline-block;">
+               Verify Account
+            </a>
+        </p>
 
+        <p>If the button does not work, copy and paste this link into your browser:</p>
+        <p>{verification_link}</p>
 
-def send_ticket_opened_email(user_email: str, user_name: str, ticket_display_id: str, subject_text: str) -> bool:
-    body = f"""Hello {user_name},
+        <br>
+        <p>Regards,<br>IntelliDesk Support Team</p>
+    </div>
+    """
 
-Your IntelliDesk support ticket has been created successfully.
-
-Ticket ID: {ticket_display_id}
-Subject: {subject_text}
-Status: Open
-
-Our IT support team will review your request and provide an update.
-
-Regards,
-IntelliDesk IT Support
-"""
-    return send_email(user_email, f"Ticket Created - {ticket_display_id}", body)
-
-
-def send_ticket_reply_email(user_email: str, user_name: str, ticket_display_id: str, reply_text: str) -> bool:
-    body = f"""Hello {user_name},
-
-A new reply has been added to your IntelliDesk support ticket.
-
-Ticket ID: {ticket_display_id}
-
-Reply:
-{reply_text}
-
-Please log in to IntelliDesk to view the full conversation.
-
-Regards,
-IntelliDesk IT Support
-"""
-    return send_email(user_email, f"New Reply on Ticket - {ticket_display_id}", body)
+    return _send_email(user_email, subject, html_body)
 
 
-def send_ticket_closed_email(user_email: str, user_name: str, ticket_display_id: str, subject_text: str) -> bool:
-    body = f"""Hello {user_name},
+def send_ticket_notification(
+    user_email: str,
+    user_name: str,
+    ticket_id: int,
+    ticket_subject: str
+) -> bool:
+    """
+    Send ticket creation/update notification.
+    """
+    ticket_link = f"{BASE_URL}/tickets/{ticket_id}"
 
-Your IntelliDesk support ticket has been closed.
+    subject = f"IntelliDesk Ticket Update - #{ticket_id}"
 
-Ticket ID: {ticket_display_id}
-Subject: {subject_text}
-Status: Closed
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Hello {user_name},</h2>
+        <p>Your IntelliDesk support ticket has been created or updated.</p>
 
-Please log in to IntelliDesk and submit feedback about your support experience.
+        <p><strong>Ticket ID:</strong> #{ticket_id}</p>
+        <p><strong>Subject:</strong> {ticket_subject}</p>
 
-Regards,
-IntelliDesk IT Support
-"""
-    return send_email(user_email, f"Ticket Closed - {ticket_display_id}", body)
+        <p>
+            <a href="{ticket_link}"
+               style="background-color:#2563eb;color:white;padding:12px 18px;
+               text-decoration:none;border-radius:6px;display:inline-block;">
+               View Ticket
+            </a>
+        </p>
+
+        <br>
+        <p>Regards,<br>IntelliDesk Support Team</p>
+    </div>
+    """
+
+    return _send_email(user_email, subject, html_body)

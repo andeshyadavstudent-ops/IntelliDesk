@@ -1,45 +1,49 @@
 """
 IntelliDesk Email Service
-Uses Resend HTTP API instead of Gmail SMTP.
-This works better on Render Free because SMTP ports are blocked.
+Uses Brevo API for public email notifications.
 """
 
 import os
-import httpx
+import requests
 from typing import Optional
 
 
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-EMAIL_FROM = os.getenv("EMAIL_FROM", "onboarding@resend.dev")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+EMAIL_FROM = os.getenv("EMAIL_FROM", "intellideskitsupport@gmail.com")
+EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "IntelliDesk Support")
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 
 def _send_email(to_email: str, subject: str, html_body: str) -> bool:
-    """
-    Send email using Resend API.
-    Returns True if email is sent successfully, otherwise False.
-    """
-    if not RESEND_API_KEY:
-        print("[EMAIL] RESEND_API_KEY is missing. Email not sent.")
+    if not BREVO_API_KEY:
+        print("[EMAIL] BREVO_API_KEY is missing. Email not sent.")
         return False
 
     try:
-        response = httpx.post(
-            "https://api.resend.com/emails",
+        response = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
             headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json",
+                "accept": "application/json",
+                "api-key": BREVO_API_KEY,
+                "content-type": "application/json",
             },
             json={
-                "from": EMAIL_FROM,
-                "to": [to_email],
+                "sender": {
+                    "name": EMAIL_FROM_NAME,
+                    "email": EMAIL_FROM,
+                },
+                "to": [
+                    {
+                        "email": to_email,
+                    }
+                ],
                 "subject": subject,
-                "html": html_body,
+                "htmlContent": html_body,
             },
-            timeout=15,
+            timeout=20,
         )
 
-        if response.status_code in [200, 201]:
+        if response.status_code in [200, 201, 202]:
             print(f"[EMAIL] Email sent successfully to {to_email}")
             return True
 
@@ -56,10 +60,6 @@ def send_verification_email(
     user_name: str,
     verification_link: Optional[str] = None
 ) -> bool:
-    """
-    Send account verification email.
-    This matches the existing auth_routes.py function call.
-    """
     if verification_link is None:
         verification_link = BASE_URL
 
@@ -79,7 +79,7 @@ def send_verification_email(
             </a>
         </p>
 
-        <p>If the button does not work, copy and paste this link into your browser:</p>
+        <p>If the button does not work, copy and paste this link:</p>
         <p>{verification_link}</p>
 
         <br>
@@ -96,12 +96,9 @@ def send_ticket_notification(
     ticket_id: int,
     ticket_subject: str
 ) -> bool:
-    """
-    Send ticket creation/update notification.
-    """
     ticket_link = f"{BASE_URL}/tickets/{ticket_id}"
 
-    subject = f"IntelliDesk Ticket Update - #{ticket_id}"
+    subject = f"IntelliDesk Ticket Notification - #{ticket_id}"
 
     html_body = f"""
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
@@ -125,9 +122,9 @@ def send_ticket_notification(
     """
 
     return _send_email(user_email, subject, html_body)
-# ============================================================
+
+
 # Compatibility wrapper functions for old IntelliDesk code
-# ============================================================
 
 def send_ticket_opened_email(
     user_email=None,
@@ -137,12 +134,7 @@ def send_ticket_opened_email(
     ticket_display_id=None,
     **kwargs
 ):
-    return send_ticket_notification(
-        user_email=user_email,
-        user_name=user_name,
-        ticket_id=ticket_id,
-        ticket_subject=ticket_subject,
-    )
+    return send_ticket_notification(user_email, user_name, ticket_id, ticket_subject)
 
 
 def send_ticket_status_update_email(
@@ -153,12 +145,7 @@ def send_ticket_status_update_email(
     ticket_display_id=None,
     **kwargs
 ):
-    return send_ticket_notification(
-        user_email=user_email,
-        user_name=user_name,
-        ticket_id=ticket_id,
-        ticket_subject=ticket_subject,
-    )
+    return send_ticket_notification(user_email, user_name, ticket_id, ticket_subject)
 
 
 def send_ticket_reply_email(
@@ -169,12 +156,7 @@ def send_ticket_reply_email(
     ticket_display_id=None,
     **kwargs
 ):
-    return send_ticket_notification(
-        user_email=user_email,
-        user_name=user_name,
-        ticket_id=ticket_id,
-        ticket_subject=ticket_subject,
-    )
+    return send_ticket_notification(user_email, user_name, ticket_id, ticket_subject)
 
 
 def send_ticket_closed_email(
@@ -185,9 +167,4 @@ def send_ticket_closed_email(
     ticket_display_id=None,
     **kwargs
 ):
-    return send_ticket_notification(
-        user_email=user_email,
-        user_name=user_name,
-        ticket_id=ticket_id,
-        ticket_subject=ticket_subject,
-    )
+    return send_ticket_notification(user_email, user_name, ticket_id, ticket_subject)

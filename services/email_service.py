@@ -125,7 +125,18 @@ def send_ticket_notification(
     """
 
     return _send_email(user_email, subject, html_body)
-def send_ticket_opened_email(user_email, user_name, ticket_id, ticket_subject):
+# ============================================================
+# Compatibility wrapper functions for old IntelliDesk code
+# ============================================================
+
+def send_ticket_opened_email(
+    user_email=None,
+    user_name="User",
+    ticket_id=None,
+    ticket_subject="Support Ticket",
+    ticket_display_id=None,
+    **kwargs
+):
     return send_ticket_notification(
         user_email=user_email,
         user_name=user_name,
@@ -134,21 +145,46 @@ def send_ticket_opened_email(user_email, user_name, ticket_id, ticket_subject):
     )
 
 
-def send_ticket_status_update_email(user_email, user_name, ticket_id, ticket_subject):
+def send_ticket_status_update_email(
+    user_email=None,
+    user_name="User",
+    ticket_id=None,
+    ticket_subject="Support Ticket",
+    ticket_display_id=None,
+    **kwargs
+):
     return send_ticket_notification(
         user_email=user_email,
         user_name=user_name,
         ticket_id=ticket_id,
         ticket_subject=ticket_subject,
     )
-def send_ticket_reply_email(user_email, user_name, ticket_id, ticket_subject):
+
+
+def send_ticket_reply_email(
+    user_email=None,
+    user_name="User",
+    ticket_id=None,
+    ticket_subject="Support Ticket",
+    ticket_display_id=None,
+    **kwargs
+):
     return send_ticket_notification(
         user_email=user_email,
         user_name=user_name,
         ticket_id=ticket_id,
         ticket_subject=ticket_subject,
     )
-def send_ticket_closed_email(user_email, user_name, ticket_id, ticket_subject):
+
+
+def send_ticket_closed_email(
+    user_email=None,
+    user_name="User",
+    ticket_id=None,
+    ticket_subject="Support Ticket",
+    ticket_display_id=None,
+    **kwargs
+):
     return send_ticket_notification(
         user_email=user_email,
         user_name=user_name,

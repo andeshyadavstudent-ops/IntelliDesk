@@ -125,3 +125,19 @@ def send_ticket_notification(
     """
 
     return _send_email(user_email, subject, html_body)
+def send_ticket_opened_email(user_email, user_name, ticket_id, ticket_subject):
+    return send_ticket_notification(
+        user_email=user_email,
+        user_name=user_name,
+        ticket_id=ticket_id,
+        ticket_subject=ticket_subject,
+    )
+
+
+def send_ticket_status_update_email(user_email, user_name, ticket_id, ticket_subject):
+    return send_ticket_notification(
+        user_email=user_email,
+        user_name=user_name,
+        ticket_id=ticket_id,
+        ticket_subject=ticket_subject,
+    )

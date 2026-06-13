@@ -69,19 +69,23 @@ async def root(
     request: Request,
     current_user: User = Depends(get_current_user_optional)
 ):
-    """Show a separate IntelliDesk welcome page instead of redirecting to dashboard."""
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=303)
+    if current_user:
+        templates = Jinja2Templates(directory="templates")
+        return templates.TemplateResponse(
+            "home.html",
+            {
+                "request": request,
+                "user": current_user
+            }
+        )
 
     templates = Jinja2Templates(directory="templates")
     return templates.TemplateResponse(
-        "home.html",
+        "landing.html",
         {
-            "request": request,
-            "user": current_user
+            "request": request
         }
     )
-
 
 # Custom error handlers
 @app.exception_handler(404)

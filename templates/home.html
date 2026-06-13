@@ -1,96 +1,200 @@
 {% extends "base.html" %}
+
 {% block title %}Welcome - IntelliDesk{% endblock %}
 
 {% block content %}
-<div class="id-card mb-4" style="background: linear-gradient(135deg, #eff6ff, #ffffff);">
-    <div class="row align-items-center g-4">
-        <div class="col-lg-8">
-<h1 style="font-size:2rem; font-weight:800; margin-bottom:0.5rem;">
-    Welcome to IntelliDesk
-</h1>
 
-<div class="mb-3">
-    <span class="badge bg-primary px-3 py-2" style="font-size:0.9rem;">
-        Developed by Andesh Yadav
-    </span>
-</div>
+{% set role = user.role.value if user.role.value is defined else user.role %}
+{% set role_upper = role|string|upper %}
 
-<p style="font-size:1rem; color:var(--id-text-muted); max-width:760px;">
-    IntelliDesk is an AI-powered IT helpdesk platform designed to streamline IT support
-    operations. Users can troubleshoot common technical issues, create and track support
-    tickets, communicate directly with the IT team, and receive intelligent assistance
-    through the integrated AI support agent.
-</p>
-            <div class="d-flex gap-2 flex-wrap mt-3">
-                <a href="/chat" class="btn-id">
-                    <i class="bi bi-robot me-1"></i>Open AI Assistant
+<div class="container py-5">
+
+    <div class="row align-items-center mb-5">
+        <div class="col-lg-7">
+            <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill mb-3">
+                AI-Powered IT Helpdesk
+            </span>
+
+            <h1 class="fw-bold display-5 mb-3">
+                Welcome back, {{ user.name }}
+            </h1>
+
+            <p class="text-muted fs-5">
+                IntelliDesk helps you manage IT support requests, communicate with support staff,
+                track ticket progress, and get instant AI-powered assistance from one simple workspace.
+            </p>
+
+            <div class="d-flex gap-3 flex-wrap mt-4">
+                <a href="/chat" class="btn btn-primary btn-lg px-4">
+                    <i class="bi bi-chat-dots me-1"></i> Open AI Assistant
                 </a>
 
-                {% if user.role.value == 'admin' %}
-                <a href="/admin" class="btn-id-outline">
-                    <i class="bi bi-grid-1x2 me-1"></i>Admin Dashboard
+                {% if role_upper == "ADMIN" %}
+                <a href="/admin" class="btn btn-outline-primary btn-lg px-4">
+                    <i class="bi bi-speedometer2 me-1"></i> Admin Dashboard
+                </a>
+                <a href="/analytics" class="btn btn-outline-secondary btn-lg px-4">
+                    <i class="bi bi-bar-chart-line me-1"></i> Analytics
                 </a>
                 {% else %}
-                <a href="/dashboard" class="btn-id-outline">
-                    <i class="bi bi-ticket-detailed me-1"></i>My Tickets
+                <a href="/dashboard" class="btn btn-outline-primary btn-lg px-4">
+                    <i class="bi bi-ticket-detailed me-1"></i> My Tickets
                 </a>
                 {% endif %}
             </div>
         </div>
 
-        <div class="col-lg-4">
-            <div class="id-card" style="box-shadow:none;">
-                <h3 style="font-size:1rem; font-weight:700;">System Status</h3>
-                <p style="margin:0; color:var(--id-success); font-weight:700;">
-                    <i class="bi bi-check-circle me-1"></i>Online and ready
-                </p>
-                <p style="margin-top:0.5rem; color:var(--id-text-muted); font-size:0.9rem;">
-                    Logged in as {{ user.name }} ({{ user.role.value | title }})
-                </p>
+        <div class="col-lg-5 mt-4 mt-lg-0">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">System Status</h5>
+
+                    <p class="text-success fw-bold mb-2">
+                        <i class="bi bi-check-circle"></i> Online and ready
+                    </p>
+
+                    <p class="text-muted mb-1">
+                        Logged in as <strong>{{ user.name }}</strong>
+                    </p>
+
+                    <p class="text-muted mb-0">
+                        Role: <span class="badge bg-primary-subtle text-primary">{{ role|capitalize }}</span>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <div class="bg-primary-subtle text-primary rounded-4 d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width:58px;height:58px;">
+                        <i class="bi bi-robot fs-3"></i>
+                    </div>
+
+                    <h4 class="fw-bold">AI Assistant</h4>
+
+                    <p class="text-muted">
+                        Get instant help for password resets, internet issues, software installation,
+                        hardware problems, and access requests.
+                    </p>
+
+                    <a href="/chat" class="btn btn-outline-primary">
+                        Start Chat
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% if role_upper == "ADMIN" %}
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <div class="bg-success-subtle text-success rounded-4 d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width:58px;height:58px;">
+                        <i class="bi bi-speedometer2 fs-3"></i>
+                    </div>
+
+                    <h4 class="fw-bold">Admin Dashboard</h4>
+
+                    <p class="text-muted">
+                        View all tickets, reply to users, update ticket status, and manage IT support activity.
+                    </p>
+
+                    <a href="/admin" class="btn btn-outline-primary">
+                        Open Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <div class="bg-success-subtle text-success rounded-4 d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width:58px;height:58px;">
+                        <i class="bi bi-ticket-detailed fs-3"></i>
+                    </div>
+
+                    <h4 class="fw-bold">My Tickets</h4>
+
+                    <p class="text-muted">
+                        View your ticket status, read support replies, and continue conversations with IT support.
+                    </p>
+
+                    <a href="/dashboard" class="btn btn-outline-primary">
+                        View Tickets
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <div class="bg-warning-subtle text-warning rounded-4 d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width:58px;height:58px;">
+                        <i class="bi bi-plus-circle fs-3"></i>
+                    </div>
+
+                    <h4 class="fw-bold">Create Ticket</h4>
+
+                    <p class="text-muted">
+                        Submit a new support request when your issue needs direct IT team assistance.
+                    </p>
+
+                    <a href="/tickets/new" class="btn btn-outline-primary">
+                        Create New Ticket
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {% if role_upper == "ADMIN" %}
+    <div class="row g-4 mt-2">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold">
+                        <i class="bi bi-bar-chart-line text-primary me-2"></i>
+                        Analytics & Insights
+                    </h4>
+                    <p class="text-muted">
+                        Monitor support performance, ticket trends, and helpdesk activity through visual reports.
+                    </p>
+                    <a href="/analytics" class="btn btn-outline-primary">
+                        View Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold">
+                        <i class="bi bi-envelope-check text-primary me-2"></i>
+                        Email Notifications
+                    </h4>
+                    <p class="text-muted">
+                        Users receive email updates when tickets are created, replied to, updated, or closed.
+                    </p>
+                    <a href="/admin" class="btn btn-outline-primary">
+                        Manage Tickets
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 
-<div class="row g-3">
-    <div class="col-md-4">
-        <div class="id-card h-100">
-            <div class="stat-icon blue mb-3"><i class="bi bi-chat-dots"></i></div>
-            <h3 style="font-size:1.1rem; font-weight:700;">AI Assistant</h3>
-            <p style="color:var(--id-text-muted);">
-                Ask for help with password resets, internet issues, software installation,
-                hardware problems, and access requests.
-            </p>
-            <a href="/chat" class="btn-id-outline">Start Chat</a>
-        </div>
-    </div>
 
-    <div class="col-md-4">
-        <div class="id-card h-100">
-            <div class="stat-icon green mb-3"><i class="bi bi-ticket-detailed"></i></div>
-            <h3 style="font-size:1.1rem; font-weight:700;">
-                {% if user.role.value == 'admin' %}All Tickets{% else %}My Tickets{% endif %}
-            </h3>
-            <p style="color:var(--id-text-muted);">
-                View ticket status, read updates, and continue conversations with the support team.
-            </p>
-            {% if user.role.value == 'admin' %}
-            <a href="/admin" class="btn-id-outline">Open Dashboard</a>
-            {% else %}
-            <a href="/dashboard" class="btn-id-outline">View Tickets</a>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="id-card h-100">
-            <div class="stat-icon amber mb-3"><i class="bi bi-plus-circle"></i></div>
-            <h3 style="font-size:1.1rem; font-weight:700;">Create Ticket</h3>
-            <p style="color:var(--id-text-muted);">
-                Submit a manual support request when an issue needs direct IT team follow-up.
-            </p>
-            <a href="/tickets/new" class="btn-id-outline">Create New Ticket</a>
-        </div>
-    </div>
-</div>
 {% endblock %}

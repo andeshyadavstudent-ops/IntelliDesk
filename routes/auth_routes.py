@@ -101,11 +101,24 @@ async def register_submit(
             {"request": request, "error": "Password must be at least 6 characters"},
         )
 
-    existing = db.query(User).filter(User.email == email).first()
-    if existing:
+    existing_email = db.query(User).filter(
+        User.email == email.strip().lower()
+    ).first()
+
+    if existing_email:
         return templates.TemplateResponse(
             "register.html",
-            {"request": request, "error": "An account with this email already exists"},
+            {"request": request, "error": "This email address is already taken."},
+        )
+
+    existing_name = db.query(User).filter(
+        User.name == name.strip()
+    ).first()
+
+    if existing_name:
+        return templates.TemplateResponse(
+            "register.html",
+            {"request": request, "error": "This username is already taken."},
         )
 
     token = secrets.token_urlsafe(32)
